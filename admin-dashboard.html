@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Portal – Admin Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    .admin-layout{display:flex;min-height:100vh}
+    .admin-sidebar{width:240px;background:var(--green);color:white;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform .3s}
+    .sidebar-brand{padding:1.5rem 1.2rem;border-bottom:1px solid rgba(255,255,255,.15);display:flex;align-items:center;gap:.7rem}
+    .sidebar-brand .brand-icon{background:rgba(255,255,255,.2)}
+    .sidebar-brand span{font-weight:700;font-size:1rem;color:white}
+    .sidebar-nav{padding:1rem 0;flex:1}
+    .sidebar-link{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.2rem;color:rgba(255,255,255,.75);font-size:.9rem;font-weight:500;cursor:pointer;transition:all .2s;border-left:3px solid transparent}
+    .sidebar-link:hover,.sidebar-link.active{background:rgba(255,255,255,.12);color:white;border-left-color:white}
+    .sidebar-link i{width:18px;text-align:center}
+    .sidebar-logout{padding:1rem 1.2rem;border-top:1px solid rgba(255,255,255,.15)}
+    .btn-logout{display:flex;align-items:center;gap:.6rem;background:rgba(255,255,255,.15);color:white;border:none;padding:.6rem 1rem;border-radius:10px;width:100%;cursor:pointer;font-size:.88rem;font-weight:600;transition:background .2s}
+    .btn-logout:hover{background:rgba(255,255,255,.25)}
+    .admin-main{margin-left:240px;flex:1;background:var(--bg);min-height:100vh}
+    .admin-topbar{background:white;border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+    .admin-topbar h1{font-size:1.2rem;font-weight:700}
+    .admin-topbar p{font-size:.82rem;color:var(--text-muted)}
+    .admin-badge{display:flex;align-items:center;gap:.5rem;background:var(--green-light);color:var(--green);padding:.4rem .9rem;border-radius:20px;font-size:.82rem;font-weight:600}
+    .admin-content{padding:2rem}
+    .admin-panel{display:none}
+    .admin-panel.active{display:block}
+    .mgmt-filters{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+    .mgmt-filters .search-wrap{flex:1;min-width:200px}
+    .admin-table-card{background:white;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--card-shadow);overflow:hidden}
+    .admin-table{width:100%;border-collapse:collapse;font-size:.88rem}
+    .admin-table th{background:var(--green-light);color:var(--green-dark);font-weight:700;padding:.9rem 1rem;text-align:left;border-bottom:2px solid var(--border)}
+    .admin-table td{padding:.85rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle}
+    .admin-table tr:last-child td{border:none}
+    .admin-table tr:hover td{background:var(--bg)}
+    .status-select{padding:.3rem .6rem;border-radius:8px;border:1.5px solid var(--border);font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer;background:white;transition:border .2s}
+    .status-select:focus{outline:none;border-color:var(--green)}
+    .btn-delete{background:#fde8e8;color:#c0392b;border:none;border-radius:8px;padding:.35rem .7rem;font-size:.82rem;cursor:pointer;transition:all .2s}
+    .btn-delete:hover{background:#c0392b;color:white}
+    .btn-view{background:var(--green-light);color:var(--green);border:none;border-radius:8px;padding:.35rem .7rem;font-size:.82rem;cursor:pointer;transition:all .2s;margin-right:.3rem}
+    .btn-view:hover{background:var(--green);color:white}
+    .toast{position:fixed;bottom:2rem;right:2rem;background:var(--green);color:white;padding:.9rem 1.5rem;border-radius:12px;font-size:.9rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:999;display:flex;align-items:center;gap:.6rem;transform:translateY(80px);opacity:0;transition:all .3s ease}
+    .toast.show{transform:translateY(0);opacity:1}
+    .admin-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.2rem;margin-bottom:2rem}
+    .sidebar-toggle{display:none;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--green)}
+    @media(max-width:768px){.admin-sidebar{transform:translateX(-100%)}.admin-sidebar.open{transform:translateX(0)}.admin-main{margin-left:0}.sidebar-toggle{display:block}.admin-content{padding:1rem}.mgmt-filters{flex-direction:column}}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+    .detail-item label{display:block;font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem}
+    .detail-item p{font-weight:600;font-size:.95rem}
+    .priority-high{color:#c0392b;font-weight:700}
+    .priority-medium{color:#e67e22;font-weight:700}
+    .priority-low{color:var(--green);font-weight:700}
+    .loading-msg{color:var(--text-muted);padding:2rem;text-align:center}
+  </style>
+</head>
+<body>
+
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-leaf"></i></div>
+      <span>Smart Portal</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-link active" onclick="showPanel('overview', this)"><i class="fa-solid fa-gauge"></i> Overview</div>
+      <div class="sidebar-link" onclick="showPanel('manage', this)"><i class="fa-solid fa-list-check"></i> Manage Complaints</div>
+      <div class="sidebar-link" onclick="showPanel('priority', this)"><i class="fa-solid fa-fire"></i> Top Priority</div>
+      <div class="sidebar-link" onclick="showPanel('resolved', this)"><i class="fa-solid fa-circle-check"></i> Resolved</div>
+    </nav>
+    <div class="sidebar-logout">
+      <button class="btn-logout" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div style="display:flex;align-items:center;gap:1rem">
+        <button class="sidebar-toggle" onclick="document.getElementById('adminSidebar').classList.toggle('open')"><i class="fa-solid fa-bars"></i></button>
+        <div>
+          <h1 id="panelTitle">Overview</h1>
+          <p id="panelSub">Welcome back, Admin</p>
+        </div>
+      </div>
+      <div class="admin-badge"><i class="fa-solid fa-shield-halved"></i> Admin Panel</div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- OVERVIEW -->
+      <div class="admin-panel active" id="panel-overview">
+        <div class="admin-stat-grid" id="adminStats"><p class="loading-msg">Loading...</p></div>
+        <div class="chart-card">
+          <h3>Recent Complaints — Quick View</h3>
+          <div id="overviewList" style="margin-top:1rem"><p class="loading-msg">Loading...</p></div>
+        </div>
+      </div>
+
+      <!-- MANAGE -->
+      <div class="admin-panel" id="panel-manage">
+        <div class="mgmt-filters">
+          <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="adminSearch" class="form-input" placeholder="Search complaints..." oninput="renderManageTable()"/>
+          </div>
+          <select id="adminStatusFilter" class="form-input filter-select" onchange="renderManageTable()">
+            <option value="">All Statuses</option>
+            <option>Submitted</option><option>Under Review</option>
+            <option>In Progress</option><option>Resolved</option>
+          </select>
+          <select id="adminCatFilter" class="form-input filter-select" onchange="renderManageTable()">
+            <option value="">All Categories</option>
+            <option value="Pothole / Road Damage">Road</option>
+            <option value="Garbage / Waste">Garbage</option>
+            <option value="Broken Street Light">Street Light</option>
+            <option value="Water Supply Issue">Water</option>
+            <option value="Sewage / Drainage">Sewage</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="admin-table-card">
+          <div style="overflow-x:auto">
+            <table class="admin-table">
+              <thead>
+                <tr><th>#</th><th>Title</th><th>Category</th><th>Location</th><th>Votes</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="adminTableBody"><tr><td colspan="8" class="loading-msg">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRIORITY -->
+      <div class="admin-panel" id="panel-priority">
+        <div class="chart-card">
+          <h3>Top Priority Complaints</h3>
+          <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.2rem">Most upvoted unresolved complaints.</p>
+          <div id="priorityAdminList"><p class="loading-msg">Loading...</p></div>
+        </div>
+      </div>
+
+      <!-- RESOLVED -->
+      <div class="admin-panel" id="panel-resolved">
+        <div class="chart-card">
+          <h3>Resolved Complaints</h3>
+          <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.2rem">All successfully resolved complaints.</p>
+          <div id="resolvedList"><p class="loading-msg">Loading...</p></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="adminModal" onclick="closeAdminModal()">
+  <div class="modal-box" style="max-width:580px" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeAdminModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div id="adminModalContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <i class="fa-solid fa-circle-check"></i>
+  <span id="toastMsg">Status updated!</span>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  const API = 'https://bo2px8zjmk.execute-api.ap-south-1.amazonaws.com';
+
+  if (localStorage.getItem('sp_admin') !== 'true') {
+    window.location.href = 'admin-login.html';
+  }
+
+  // cache loaded complaints so we don't re-fetch on every filter
+  let _adminComplaints = [];
+
+  async function loadAdminComplaints() {
+    const res = await fetch(API + '/complaints');
+    if (!res.ok) throw new Error('Failed');
+    _adminComplaints = await res.json();
+    return _adminComplaints;
+  }
+
+  const PANEL_TITLES = {
+    overview: ['Overview','Welcome back, Admin'],
+    manage:   ['Manage Complaints','Update status, view and delete complaints'],
+    priority: ['Top Priority','Most upvoted complaints needing attention'],
+    resolved: ['Resolved','Successfully resolved complaints'],
+  };
+
+  function showPanel(name, el) {
+    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('panel-'+name).classList.add('active');
+    el.classList.add('active');
+    document.getElementById('panelTitle').textContent = PANEL_TITLES[name][0];
+    document.getElementById('panelSub').textContent   = PANEL_TITLES[name][1];
+    document.getElementById('adminSidebar').classList.remove('open');
+
+    if (name === 'overview') renderAdminOverview();
+    if (name === 'manage')   loadAdminComplaints().then(renderManageTable);
+    if (name === 'priority') loadAdminComplaints().then(renderPriorityPanel);
+    if (name === 'resolved') loadAdminComplaints().then(renderResolvedPanel);
+  }
+
+  // ---- OVERVIEW ----
+  async function renderAdminOverview() {
+    try {
+      const complaints = await loadAdminComplaints();
+      const total = complaints.length;
+      const byStatus = {Submitted:0,'Under Review':0,'In Progress':0,Resolved:0};
+      complaints.forEach(c => byStatus[c.status] = (byStatus[c.status]||0)+1);
+
+      const stats = [
+        {icon:'fa-file-lines',  cls:'blue',   label:'Total',        value:total},
+        {icon:'fa-paper-plane', cls:'blue',   label:'Submitted',    value:byStatus['Submitted']},
+        {icon:'fa-eye',         cls:'orange', label:'Under Review',  value:byStatus['Under Review']},
+        {icon:'fa-clock',       cls:'orange', label:'In Progress',   value:byStatus['In Progress']},
+        {icon:'fa-circle-check',cls:'green',  label:'Resolved',     value:byStatus['Resolved']},
+      ];
+      document.getElementById('adminStats').innerHTML = stats.map(s => `
+        <div class="dash-stat-card">
+          <div class="stat-icon ${s.cls}"><i class="fa-solid ${s.icon}"></i></div>
+          <div class="stat-info"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div></div>
+        </div>`).join('');
+
+      const recent = [...complaints].sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
+      document.getElementById('overviewList').innerHTML = recent.map(c => `
+        <div class="priority-item">
+          <div class="list-icon" style="width:36px;height:36px;font-size:1rem">
+            <i class="fa-solid ${CAT_ICONS[c.category]||'fa-circle-exclamation'}"></i>
+          </div>
+          <div class="priority-info">
+            <div class="priority-title">${c.title}</div>
+            <div class="priority-meta">${c.location} • ${(c.created_at||'').slice(0,10)}</div>
+          </div>
+          ${badgeHtml(c.status)}
+          <button class="btn-view" onclick="openAdminModal(${c.id})"><i class="fa-solid fa-eye"></i></button>
+        </div>`).join('') || '<p class="loading-msg">No complaints yet.</p>';
+    } catch(e) {
+      document.getElementById('adminStats').innerHTML = '<p class="loading-msg">Could not load data.</p>';
+    }
+  }
+
+  // ---- MANAGE TABLE ----
+  function renderManageTable() {
+    const search = (document.getElementById('adminSearch')?.value||'').toLowerCase();
+    const sf = document.getElementById('adminStatusFilter')?.value||'';
+    const cf = document.getElementById('adminCatFilter')?.value||'';
+
+    let data = [..._adminComplaints];
+    if (search) data = data.filter(c => c.title.toLowerCase().includes(search)||c.location.toLowerCase().includes(search));
+    if (sf) data = data.filter(c => c.status===sf);
+    if (cf) data = data.filter(c => c.category===cf);
+
+    const body = document.getElementById('adminTableBody');
+    if (!data.length) {
+      body.innerHTML = `<tr><td colspan="8" class="loading-msg">No complaints found.</td></tr>`;
+      return;
+    }
+    body.innerHTML = data.map((c,i) => `
+      <tr id="row-${c.id}">
+        <td>${i+1}</td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">${c.title}</td>
+        <td style="font-size:.8rem">${c.category}</td>
+        <td style="font-size:.8rem;color:var(--text-muted)">${c.location}</td>
+        <td><b>${c.votes}</b></td>
+        <td style="font-size:.8rem">${(c.created_at||'').slice(0,10)}</td>
+        <td>
+          <select class="status-select" onchange="updateStatus(${c.id}, this.value)">
+            <option ${c.status==='Submitted'?'selected':''}>Submitted</option>
+            <option ${c.status==='Under Review'?'selected':''}>Under Review</option>
+            <option ${c.status==='In Progress'?'selected':''}>In Progress</option>
+            <option ${c.status==='Resolved'?'selected':''}>Resolved</option>
+          </select>
+        </td>
+        <td>
+          <button class="btn-view" onclick="openAdminModal(${c.id})"><i class="fa-solid fa-eye"></i></button>
+          <button class="btn-delete" onclick="deleteComplaintAdmin(${c.id})"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ---- UPDATE STATUS (calls Lambda) ----
+  async function updateStatus(id, newStatus) {
+    try {
+      const res = await fetch(API + '/complaints/status', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({id, status: newStatus})
+      });
+      const result = await res.json();
+      if (result.success) {
+        const c = _adminComplaints.find(x => x.id === id);
+        if (c) c.status = newStatus;
+        showToast(`Status updated to "${newStatus}"`);
+      } else {
+        showToast('Error updating status');
+      }
+    } catch(e) {
+      showToast('Network error. Could not update.');
+    }
+  }
+
+  // ---- DELETE (calls Lambda) ----
+  async function deleteComplaintAdmin(id) {
+    if (!confirm('Are you sure you want to delete this complaint?')) return;
+    try {
+      const res = await fetch(API + '/complaints/delete', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({id})
+      });
+      const result = await res.json();
+      if (result.success) {
+        _adminComplaints = _adminComplaints.filter(c => c.id !== id);
+        renderManageTable();
+        showToast('Complaint deleted.');
+      } else {
+        showToast('Error deleting complaint.');
+      }
+    } catch(e) {
+      showToast('Network error. Could not delete.');
+    }
+  }
+
+  // ---- PRIORITY ----
+  function renderPriorityPanel() {
+    const top = [..._adminComplaints].filter(c => c.status!=='Resolved').sort((a,b)=>b.votes-a.votes);
+    document.getElementById('priorityAdminList').innerHTML = top.map((c,i) => {
+      const pClass = i===0?'priority-high':i<3?'priority-medium':'priority-low';
+      return `
+        <div class="priority-item">
+          <div class="priority-rank ${pClass}">#${i+1}</div>
+          <div class="priority-info">
+            <div class="priority-title">${c.title}</div>
+            <div class="priority-meta">${c.location} • ${c.category}</div>
+          </div>
+          ${badgeHtml(c.status)}
+          <div class="priority-votes"><i class="fa-solid fa-thumbs-up"></i> ${c.votes}</div>
+          <select class="status-select" onchange="updateStatus(${c.id},this.value).then(()=>renderPriorityPanel())">
+            <option ${c.status==='Submitted'?'selected':''}>Submitted</option>
+            <option ${c.status==='Under Review'?'selected':''}>Under Review</option>
+            <option ${c.status==='In Progress'?'selected':''}>In Progress</option>
+            <option ${c.status==='Resolved'?'selected':''}>Resolved</option>
+          </select>
+        </div>`;
+    }).join('') || '<p class="loading-msg">No pending complaints!</p>';
+  }
+
+  // ---- RESOLVED ----
+  function renderResolvedPanel() {
+    const resolved = _adminComplaints.filter(c => c.status==='Resolved');
+    document.getElementById('resolvedList').innerHTML = resolved.map(c => `
+      <div class="priority-item">
+        <div class="list-icon" style="width:36px;height:36px;font-size:1rem;background:#d4edda;color:#155724">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="priority-info">
+          <div class="priority-title">${c.title}</div>
+          <div class="priority-meta">${c.location} • ${(c.created_at||'').slice(0,10)}</div>
+        </div>
+        <div style="font-size:.82rem;color:var(--text-muted)"><i class="fa-solid fa-thumbs-up"></i> ${c.votes}</div>
+        <button class="btn-view" onclick="openAdminModal(${c.id})"><i class="fa-solid fa-eye"></i></button>
+      </div>`).join('') || '<p class="loading-msg">No resolved complaints yet.</p>';
+  }
+
+  // ---- MODAL ----
+  function openAdminModal(id) {
+    const c = _adminComplaints.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('adminModalContent').innerHTML = `
+      <h2 style="font-size:1.2rem;margin-bottom:1.2rem">${c.title}</h2>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Category</label><p>${c.category}</p></div>
+        <div class="detail-item"><label>Status</label><p>${badgeHtml(c.status)}</p></div>
+        <div class="detail-item"><label>Location</label><p>${c.location}</p></div>
+        <div class="detail-item"><label>Reported By</label><p>${c.reporter_name||''}</p></div>
+        <div class="detail-item"><label>Date</label><p>${(c.created_at||'').slice(0,10)}</p></div>
+        <div class="detail-item"><label>Votes</label><p><b>${c.votes}</b></p></div>
+      </div>
+      <div class="detail-item" style="margin-bottom:1.2rem">
+        <label>Description</label>
+        <p style="font-weight:400;line-height:1.6;margin-top:.3rem">${c.description||''}</p>
+      </div>
+      ${c.image_url?`<img src="${c.image_url}" style="width:100%;border-radius:12px;border:1px solid var(--border);margin-bottom:1.2rem" alt="complaint"/>` : ''}
+      <div style="border-top:1px solid var(--border);padding-top:1rem">
+        <label style="font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:.5rem">Update Status</label>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+          ${['Submitted','Under Review','In Progress','Resolved'].map(s => `
+            <button onclick="updateStatus(${c.id},'${s}').then(()=>{closeAdminModal();renderAdminOverview()})"
+              style="padding:.45rem 1rem;border-radius:8px;border:2px solid ${s===c.status?'var(--green)':'var(--border)'};
+              background:${s===c.status?'var(--green-light)':'white'};color:${s===c.status?'var(--green)':'var(--text-muted)'};
+              font-weight:600;font-size:.82rem;cursor:pointer">${s}</button>`).join('')}
+        </div>
+      </div>`;
+    document.getElementById('adminModal').classList.add('open');
+  }
+
+  function closeAdminModal() { document.getElementById('adminModal').classList.remove('open'); }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2500);
+  }
+
+  function adminLogout() {
+    localStorage.removeItem('sp_admin');
+    window.location.href = 'admin-login.html';
+  }
+
+  renderAdminOverview();
+</script>
+</body>
+</html>
